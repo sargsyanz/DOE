@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DOE Dashboard</title>
+
+  <!-- Mapbox -->
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+  <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v4.7.2/mapbox-gl-geocoder.min.js"></script>
+  <link href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v4.7.2/mapbox-gl-geocoder.css" rel="stylesheet" />
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Inter', sans-serif; background: #fff; }
+    #map {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 0;
+    }
+
+    .top-nav {
+      position: absolute;
+      top: 32px; left: 32px; right: 32px;
+      display: flex;
+      padding: 16px 24px;
+      justify-content: space-between;
+      align-items: center;
+      border-radius: 16px;
+      border: 1px solid rgba(96, 101, 105, 0.5);
+      background: rgba(185, 187, 189, 0.2);
+      backdrop-filter: blur(8px);
+      z-index: 10;
+    }
+    .menu { display: flex; gap: 58px; }
+    .menu a {
+      padding: 10px;
+      text-decoration: none;
+      color: #565346;
+      font-size: 16px;
+      font-weight: 300;
+      letter-spacing: 0.44px;
+    }
+    .menu a.active {
+      color: #565346;
+      border-bottom: 1.5px solid #83A37B;
+      font-weight: 600;
+    }
+    .logo svg { width: 126px; height: 44px; }
+
+    .dashboard {
+      position: absolute;
+      top: 136px;
+      left: 32px;
+      display: flex;
+      gap: 32px;
+      z-index: 5;
+      flex-direction: column;
+    }
+
+    .kpi-group {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      width: 474px;
+    }
+    .kpi-row {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+    }
+    .kpi-box {
+      width: 229px;
+      height: 208px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      border-radius: 16px;
+      background: rgba(185, 187, 189, 0.2);
+      backdrop-filter: blur(8px);
+    }
+    .kpi-box canvas { max-width: 100%; max-height: 140px; }
+
+    .global-kpi {
+      width: 474px;
+      height: 580px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+      border-radius: 16px;
+      background: rgba(185, 187, 189, 0.2);
+      backdrop-filter: blur(8px);
+    }
+    .timeline {
+      position: absolute;
+      bottom: 20%;
+      right: 32px;
+      width: 400px;
+      z-index: 10;
+      background: white;
+      padding: 12px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .chatbox {
+      position: absolute;
+      bottom: 32px;
+      right: 32px;
+      width: 300px;
+      height: 400px;
+      background: #fff;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.2);
+      z-index: 10;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <nav class="top-nav">
+    <div class="logo">
+      <img src="https://raw.githubusercontent.com/sargsyanz/DOE/7ffc3af1cabb8ec8918b32082b6bc3efed4864e8/DOE_logo.svg" alt="DOE Logo" height="44" />
+    </div>
+    <div class="menu">
+      <a href="#" class="active">Overview</a>
+      <a href="#">Energy</a>
+      <a href="#">Community</a>
+      <a href="#">Leadership</a>
+    </div>
+  </nav>
+
+  <div class="dashboard">
+    <div class="kpi-group">
+      <div class="kpi-row">
+        <div class="kpi-box">
+          <strong>Oil & Gas</strong>
+          <canvas id="oilGasChart"></canvas>
+        </div>
+        <div class="kpi-box">
+          <strong>Electricity</strong>
+          <canvas id="electricityChart"></canvas>
+        </div>
+      </div>
+      <div class="kpi-row">
+        <div class="kpi-box">
+          <strong>MIGD</strong>
+          <canvas id="migdChart"></canvas>
+        </div>
+        <div class="kpi-box">
+          <strong>Wastewater</strong>
+          <canvas id="wastewaterChart"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="global-kpi">
+      <strong>Energy Sector Statistics</strong>
+      <canvas id="globalChart" height="300"></canvas>
+    </div>
+  </div>
+
+  <div class="timeline">
+    <label>Historical Data:</label>
+    <input type="range" min="0" max="100" value="50" />
+  </div>
+  <div class="chatbox">
+    <strong>AI Assistant</strong>
+    <p>Ask me about energy usage, stats or trends...</p>
+  </div>
+
+  <script>
+    mapboxgl.accessToken = 'pk.eyJ1IjoiYXJhc2FyZ3N5YW4iLCJhIjoiY21hOGF1aDg4MGtwYTJqc2dxcWR4cjB6NyJ9.br_jlyPxiKEnA5GnU6xBhw';
+    const map = new mapboxgl.Map({
+      container: 'map',
+      style: 'mapbox://styles/arasargsyan/cmabe96z400ml01s4a4kr9bya',
+      center: [54.3886, 24.5037],
+      zoom: 6.5,
+      pitch: 45,
+      bearing: -20,
+      antialias: true
+    });
+
+    const charts = {
+      oilGasChart: new Chart(document.getElementById('oilGasChart'), {
+        type: 'bar',
+        data: { labels: ['Rigs', 'Wells', 'Processing'], datasets: [{ data: [300, 200, 100], backgroundColor: '#83A37B' }] },
+        options: { responsive: true, plugins: { legend: { display: false } } }
+      }),
+      electricityChart: new Chart(document.getElementById('electricityChart'), {
+        type: 'doughnut',
+        data: { labels: ['Solar', 'Gas', 'Nuclear'], datasets: [{ data: [20, 60, 20], backgroundColor: ['#C2A83E', '#7C868E', '#49656D'] }] },
+        options: { cutout: '70%', plugins: { legend: { position: 'bottom' } } }
+      }),
+      migdChart: new Chart(document.getElementById('migdChart'), {
+        type: 'line',
+        data: { labels: ['01/24','03/24','06/24','09/24','12/24'], datasets: [{ label: 'MIGD', data: [200, 300, 400, 350, 600], borderColor: '#6B9080', tension: 0.4 }] },
+        options: { plugins: { legend: { display: false } } }
+      }),
+      wastewaterChart: new Chart(document.getElementById('wastewaterChart'), {
+        type: 'bar',
+        data: { labels: ['Treatment Plant', 'Pumping Station'], datasets: [{ data: [300, 200], backgroundColor: '#ACB7AE' }] },
+        options: { plugins: { legend: { display: false } } }
+      }),
+      globalChart: new Chart(document.getElementById('globalChart'), {
+        type: 'bar',
+        data: {
+          labels: ['Power', 'Water', 'Flexibility', 'Renewable', 'Desalination', 'Reserve'],
+          datasets: [{
+            label: 'Sector Performance',
+            data: [16000, 50, 65, 19, 22, 18],
+            backgroundColor: '#83A37B'
+          }]
+        },
+        options: {
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true } }
+        }
+      })
+    };
+  </script>
+</body>
+</html>
