@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>3D Mapbox Map with Full Controls</title>
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+
+  <!-- Mapbox GL JS -->
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet">
+
+  <!-- Mapbox Geocoder -->
+  <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v4.7.2/mapbox-gl-geocoder.min.js"></script>
+  <link href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v4.7.2/mapbox-gl-geocoder.css" rel="stylesheet">
+
+  <style>
+    body { margin: 0; padding: 0; }
+    #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+
+    .custom-top-center {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 8px;
+      z-index: 1;
+      align-items: center;
+    }
+
+    .locate-btn {
+      background-color: white;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 6px 10px;
+      cursor: pointer;
+      font-size: 14px;
+      font-family: sans-serif;
+    }
+
+    .locate-btn:hover {
+      background-color: #f0f0f0;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div class="custom-top-center" id="top-controls">
+    <button class="locate-btn" id="locate-btn">📍 My Location</button>
+  </div>
+
+  <script>
+    mapboxgl.accessToken = 'pk.eyJ1IjoiYXJhc2FyZ3N5YW4iLCJhIjoiY21hOGF1aDg4MGtwYTJqc2dxcWR4cjB6NyJ9.br_jlyPxiKEnA5GnU6xBhw';
+
+    const centerCoords = [54.395059, 24.491078];
+
+    const map = new mapboxgl.Map({
+      container: 'map',
+      style: 'mapbox://styles/arasargsyan/cmabe96z400ml01s4a4kr9bya',
+      center: centerCoords,
+      zoom: 14,
+      pitch: 0,
+      bearing: 0,
+      antialias: true,
+      maxZoom: 24,
+      minZoom: 0
+    });
+
+    const nav = new mapboxgl.NavigationControl();
+    const geocoder = new MapboxGeocoder({
+      accessToken: mapboxgl.accessToken,
+      mapboxgl: mapboxgl,
+      marker: false
+    });
+
+    map.on('load', () => {
+      map.flyTo({
+        center: centerCoords,
+        zoom: 15.5,
+        pitch: 60,
+        bearing: -20,
+        speed: 1.2,
+        curve: 1.4
+      });
+
+      new mapboxgl.Marker({ color: 'red' })
+        .setLngLat(centerCoords)
+        .addTo(map);
+    });
+
+    // Add Geocoder and Navigation to custom container
+    document.getElementById('top-controls').appendChild(geocoder.onAdd(map));
+    document.getElementById('top-controls').appendChild(nav.onAdd(map));
+
+    // "My Location" button behavior
+    document.getElementById('locate-btn').addEventListener('click', () => {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          position => {
+            const userCoords = [position.coords.longitude, position.coords.latitude];
+            map.flyTo({
+              center: userCoords,
+              zoom: 16,
+              pitch: 45,
+              bearing: 0,
+              speed: 1.5,
+              curve: 1.2
+            });
+          },
+          () => alert('Could not retrieve your location.')
+        );
+      } else {
+        alert('Geolocation is not supported by your browser.');
+      }
+    });
+  </script>
+</body>
+</html>
